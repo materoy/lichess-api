@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
 
+use crate::utils;
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Challenge {
     pub id: String,
     pub url: String,
     pub color: String,
-    pub direction: String,
+    pub direction: Option<Direction>,
     #[serde(rename = "timeControl")]
     pub time_control: TimeControl,
     pub variant: Variant,
@@ -94,14 +96,28 @@ pub enum Speed {
     Correspondence,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub enum Direction {
+    #[serde(rename = "in")]
+    In,
+    #[serde(rename = "out")]
+    Out,
+}
+
 impl Challenge {
-    pub fn from_json_str(json: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn from_json_str(json: &str) -> Option<Result<Self, serde_json::Error>> {
         #[derive(Serialize, Deserialize)]
         pub struct ChallengeOutput {
             pub challenge: Challenge,
         }
 
-        Ok(serde_json::from_str::<ChallengeOutput>(json)?.challenge)
+        match utils::json_deserialize::<ChallengeOutput>(json) {
+            Some(output) => match output {
+                Ok(challenge_output) => Some(Ok(challenge_output.challenge)),
+                Err(e) => Some(Err(e)),
+            },
+            None => None,
+        }
     }
 }
 
@@ -120,6 +136,8 @@ mod tests {
          "rated":false,"speed":"correspondence",
          "timeControl":{"type":"unlimited"},"color":"random","finalColor":"black",
          "perf":{"icon":"","name":"Correspondence"},"direction":"out"},"socketVersion":0}"#;
-        Challenge::from_json_str(test_json).unwrap();
+
+        assert!(Challenge::from_json_str(test_json).is_some());
+        assert!(Challenge::from_json_str(test_json).unwrap().is_ok())
     }
 }
