@@ -14,7 +14,7 @@ pub struct Challenge {
     pub perf: Perf,
     pub rated: bool,
     pub speed: Speed,
-    pub status: Status,
+    pub status: ChallengeStatus,
     #[serde(rename = "initialFen")]
     pub initial_fen: Option<String>,
     #[serde(rename = "declineReason")]
@@ -65,7 +65,7 @@ pub struct Perf {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum Status {
+pub enum ChallengeStatus {
     #[serde(rename = "created")]
     Created,
     #[serde(rename = "offline")]
