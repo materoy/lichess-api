@@ -23,7 +23,9 @@ async fn create_challenge(client: Client) -> ResultReturn {
     let url = format!("{}/api/challenge/materoy-bryght", BASE_URL);
     let response = client.post(url).bearer_auth(TOKEN).send().await?;
 
-    let challenge = Challenge::from_json_str(&response.text().await?)?;
+    let response_string = response.text().await?;
+    println!("{}", response_string);
+    let challenge = Challenge::from_json_str(&response_string)?;
     println!("Challenge output: {}", challenge.id);
 
     // stream_event(client).await?;

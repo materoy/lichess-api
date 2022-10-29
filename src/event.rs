@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Event {
-    event_type: String,
+    r#type: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
