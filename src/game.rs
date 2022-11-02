@@ -7,7 +7,7 @@ pub struct Game {
     pub id: Option<String>,
     pub variant: Option<Variant>,
     pub speed: Option<Speed>,
-    pub perf: Option<Perf>,
+    pub perf: Option<String>,
     pub rated: Option<bool>,
     #[serde(rename = "initialFen")]
     pub initial_fen: Option<String>,

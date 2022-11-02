@@ -8,21 +8,27 @@ use crate::{
 };
 
 pub(crate) const BASE_URL: &str = "https://lichess.org";
-pub(crate) const TOKEN: &str = "lip_wTkRSjgSw2Vyf7Y9ESDa";
 
 pub struct Lichess {
     client: Client,
+    token: String,
 }
 
 impl Lichess {
     pub fn new() -> Self {
         Lichess {
             client: reqwest::Client::new(),
+            token: utils::read_token().unwrap(),
         }
     }
     pub async fn create_challenge(&self) -> ResultReturn {
         let url = format!("{}/api/challenge/materoy-bryght", BASE_URL);
-        let response = self.client.post(url).bearer_auth(TOKEN).send().await?;
+        let response = self
+            .client
+            .post(url)
+            .bearer_auth(&self.token)
+            .send()
+            .await?;
 
         let response_string = response.text().await?;
         if let Some(challenge) = Challenge::from_json_str(&response_string) {
@@ -39,7 +45,7 @@ impl Lichess {
 
     pub async fn stream_event(&self) -> ResultReturn {
         let url = format!("{}/api/stream/event", BASE_URL);
-        let response = self.client.get(url).bearer_auth(TOKEN).send().await?;
+        let response = self.client.get(url).bearer_auth(&self.token).send().await?;
 
         let mut response_stream = response.bytes_stream();
         while let Some(item) = response_stream.next().await {
@@ -76,7 +82,7 @@ impl Lichess {
 
     pub async fn stream_game(&self, game_id: &str) -> ResultReturn {
         let url = format!("{}/api/stream/game/{}", BASE_URL, game_id);
-        let response = self.client.get(url).bearer_auth(TOKEN).send().await?;
+        let response = self.client.get(url).bearer_auth(&self.token).send().await?;
 
         let mut response_stream = response.bytes_stream();
         while let Some(item) = response_stream.next().await {
