@@ -1,4 +1,4 @@
-use std::str::{Bytes, Utf8Error};
+use std::str::Utf8Error;
 
 pub fn json_deserialize<T: for<'a> serde::Deserialize<'a>>(
     json: &str,
@@ -10,6 +10,6 @@ pub fn json_deserialize<T: for<'a> serde::Deserialize<'a>>(
     Some(serde_json::from_str::<T>(json))
 }
 
-pub fn string_from_bytes(bytes: &[u8]) -> Result<&str, Utf8Error> {
+pub(crate) fn string_from_bytes(bytes: &[u8]) -> Result<&str, Utf8Error> {
     std::str::from_utf8(bytes)
 }

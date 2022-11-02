@@ -1,9 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    challenge::{Perf, Speed, Variant},
-    event::GameSource,
-};
+use crate::{challenge::*, event::*};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Game {
@@ -22,6 +19,9 @@ pub struct Game {
     pub status: Option<GameStatus>,
     pub created_at: Option<u128>,
     pub last_move: Option<String>,
+    pub wc: Option<u32>,
+    pub bc: Option<u32>,
+    pub lm: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -77,5 +77,8 @@ mod tests {
         "fen":"r1bqkbnr/pppp1ppp/2n5/4p1N1/4P3/8/PPPP1PPP/RNBQKB1R b KQkq - 3 3",
         "player":"black","turns":5,"startedAtTurn":0,"source":"friend","status":{"id":31,"name":"resign"},
         "createdAt":1667070660041,"winner":"black","lastMove":"f3g5"}"#;
+
+        let deserialized = Game::from_json_str(final_dump).unwrap();
+        assert!(deserialized.is_ok())
     }
 }
