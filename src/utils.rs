@@ -45,6 +45,6 @@ mod tests {
     fn test_token_read() {
         let token = read_token();
         assert!(token.is_some());
-        assert_eq!(token.unwrap(), "lip_wTkRSjgSw2Vyf7Y9ESDa")
+        assert!(token.unwrap().starts_with("lip"));
     }
 }
