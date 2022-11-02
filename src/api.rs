@@ -1,4 +1,4 @@
-use futures_util::StreamExt;
+use futures_util::{Stream, StreamExt};
 use reqwest::Client;
 
 use crate::{
@@ -38,12 +38,15 @@ impl Lichess {
             );
         }
 
-        self.stream_event().await?;
+        self.stream_event(|event| {}).await?;
 
         Ok(())
     }
 
-    pub async fn stream_event(&self) -> ResultReturn {
+    pub async fn stream_event<F>(&self, on_event: F) -> ResultReturn
+    where
+        F: Fn(&Event),
+    {
         let url = format!("{}/api/stream/event", BASE_URL);
         let response = self.client.get(url).bearer_auth(&self.token).send().await?;
 
@@ -55,10 +58,11 @@ impl Lichess {
                         Ok(string_output) => {
                             if let Some(event) = Event::from_json_str(string_output) {
                                 let event = event?;
+                                on_event(&event);
                                 match event.r#type {
                                     EventType::GameStart => {
                                         if let Some(game) = event.game {
-                                            self.stream_game(&game.id).await?;
+                                            self.stream_game(&game.id, |game| {}).await?;
                                         }
                                     }
                                     EventType::GameFinish => {
@@ -80,7 +84,10 @@ impl Lichess {
         Ok(())
     }
 
-    pub async fn stream_game(&self, game_id: &str) -> ResultReturn {
+    pub async fn stream_game<F>(&self, game_id: &str, on_event: F) -> ResultReturn
+    where
+        F: Fn(&str),
+    {
         let url = format!("{}/api/stream/game/{}", BASE_URL, game_id);
         let response = self.client.get(url).bearer_auth(&self.token).send().await?;
 
@@ -90,6 +97,7 @@ impl Lichess {
                 let string_output = utils::string_from_bytes(&game_output)?;
 
                 println!("GameStream output: {}", string_output);
+                on_event(string_output);
             }
         }
 
