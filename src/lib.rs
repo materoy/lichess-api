@@ -1,5 +1,7 @@
+use std::error::Error;
+
 use challenge::Challenge;
-use event::{Event, EventType};
+use event::Event;
 use futures_util::StreamExt;
 use reqwest::Client;
 
@@ -24,8 +26,8 @@ impl Lichess {
             token: utils::read_token().unwrap(),
         }
     }
-    pub async fn create_challenge(&self) -> ResultReturn {
-        let url = format!("{}/api/challenge/materoy-bryght", BASE_URL);
+    pub async fn create_challenge(&self, user_id: &str) -> Result<Challenge, anyhow::Error> {
+        let url = format!("{BASE_URL}/api/challenge/{user_id}");
         let response = self
             .client
             .post(url)
@@ -34,57 +36,59 @@ impl Lichess {
             .await?;
 
         let response_string = response.text().await?;
-        if let Some(challenge) = Challenge::from_json_str(&response_string) {
-            println!(
-                "You are currently challenging: {}",
-                challenge?.challenger.name
-            );
+        match Challenge::from_json_str(&response_string) {
+            Some(challenge) => {
+                let challenge = challenge?;
+                println!(
+                    "You are currently challenging: {}",
+                    challenge.challenger.name
+                );
+                Ok(challenge)
+            }
+            None => Err(anyhow::anyhow!("")),
         }
-
-        self.stream_event(|event| {}).await?;
-
-        Ok(())
     }
 
-    pub async fn stream_event<F>(&self, on_event: F) -> ResultReturn
+    pub async fn cancel_challenge(&self, challenge_id: &str) -> Result<String, anyhow::Error> {
+        let url = format!("{BASE_URL}/api/challenge/{challenge_id}/cancel");
+        let response = self
+            .client
+            .post(url)
+            .bearer_auth(&self.token)
+            .send()
+            .await?;
+
+        let response_string = response.text().await?;
+
+        Ok(response_string)
+    }
+
+    pub async fn stream_event<F>(
+        &self,
+        on_event: F,
+    ) -> impl futures_util::Stream<Item = reqwest::Result<Event>>
     where
         F: Fn(&Event),
     {
         let url = format!("{}/api/stream/event", BASE_URL);
-        let response = self.client.get(url).bearer_auth(&self.token).send().await?;
+        let response = self
+            .client
+            .get(url)
+            .bearer_auth(&self.token)
+            .send()
+            .await
+            .unwrap();
 
-        let mut response_stream = response.bytes_stream();
-        while let Some(item) = response_stream.next().await {
-            match item {
-                Ok(output) => {
-                    match utils::string_from_bytes(&output) {
-                        Ok(string_output) => {
-                            if let Some(event) = Event::from_json_str(string_output) {
-                                let event = event?;
-                                on_event(&event);
-                                match event.r#type {
-                                    EventType::GameStart => {
-                                        if let Some(game) = event.game {
-                                            self.stream_game(&game.id, |game| {}).await?;
-                                        }
-                                    }
-                                    EventType::GameFinish => {
-                                        // TODO close game stream
-                                    }
-                                    EventType::Challenge => {}
-                                    EventType::ChallengeCanceled => {}
-                                    EventType::ChallengeDeclined => {}
-                                }
-                            }
-                        }
-                        Err(e) => eprintln!("UTF-8 parsing error: {}", e),
-                    }
-                }
-                Err(err) => eprintln!("Stream error ocurred: {}", err),
-            }
-        }
+        let response_stream = response.bytes_stream();
 
-        Ok(())
+        response_stream.map(move |response| {
+            let response = response.unwrap();
+            let string_output = utils::string_from_bytes(&response);
+            let event = Event::from_json_str(string_output.unwrap()).unwrap();
+            let event = event.unwrap();
+            on_event(&event);
+            Ok(event)
+        })
     }
 
     pub async fn stream_game<F>(&self, game_id: &str, on_event: F) -> ResultReturn
@@ -112,8 +116,11 @@ impl Lichess {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_create_challenge() {
+    #[tokio::test]
+    async fn test_create_challenge() {
         let api = Lichess::new();
+        let challenge = api.create_challenge("materoy-bryght").await.unwrap();
+        let response = api.cancel_challenge(&challenge.id).await.unwrap();
+        assert_eq!(response, String::from("{\"ok\":true}"))
     }
 }

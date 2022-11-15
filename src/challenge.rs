@@ -105,17 +105,18 @@ pub enum Direction {
 }
 
 impl Challenge {
-    pub fn from_json_str(json: &str) -> Option<Result<Self, serde_json::Error>> {
+    pub fn from_json_str(json: &str) -> Option<Result<Self, anyhow::Error>> {
         #[derive(Serialize, Deserialize)]
         pub struct ChallengeOutput {
             pub challenge: Challenge,
         }
 
         match utils::json_deserialize::<ChallengeOutput>(json) {
-            Some(output) => match output {
-                Ok(challenge_output) => Some(Ok(challenge_output.challenge)),
-                Err(e) => Some(Err(e)),
-            },
+            Some(output) => Some(
+                output
+                    .map(|challenge_output| challenge_output.challenge)
+                    .map_err(|err| anyhow::anyhow!(err)),
+            ),
             None => None,
         }
     }
